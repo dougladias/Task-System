@@ -1,18 +1,32 @@
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
-import { AppDataSource } from './data/data-source';
 
 async function bootstrap() {
-  try {
-    // Inicializa a conexão com o banco
-    await AppDataSource.initialize();
-    await AppDataSource.runMigrations();
+  const app = await NestFactory.create(AppModule);
 
-    // Inicia a aplicação
-    const app = await NestFactory.create(AppModule);
-    await app.listen(process.env.PORT ?? 3000);
-  } catch (error) {
-    console.error('Erro ao inicializar:', error);
-  }
+  // Global validation pipe
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    }),
+  );
+
+  // CORS if needed
+  app.enableCors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+
+  const port = process.env.PORT || 3002;
+  await app.listen(port);
+
+  console.log(`🚀 Auth Service running on port ${port}`);
 }
 bootstrap();

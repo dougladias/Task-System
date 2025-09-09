@@ -1,12 +1,16 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { UsersService } from '../users/users.service';
-import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
-import { AuthResponseDto } from './dto/auth-response.dto';
-import { UserResponseDto } from '../users/dto/user-response.dto';
-import { JwtPayload } from './strategies/jwt.strategy';
+import { UsersService } from '../../users/service/users.service';
+import { RegisterDto } from '../dto/register.dto';
+import { LoginDto } from '../dto/login.dto';
+import { AuthResponseDto } from '../dto/auth-response.dto';
+import { UserResponseDto } from '../../users/dto/user-response.dto';
+import { JwtPayload } from '../strategies/jwt.strategy';
 
 @Injectable()
 export class AuthService {
@@ -48,7 +52,10 @@ export class AuthService {
     }
 
     // Validate password
-    const isPasswordValid = await this.usersService.validatePassword(password, user.password);
+    const isPasswordValid = await this.usersService.validatePassword(
+      password,
+      user.password,
+    );
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
