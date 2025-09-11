@@ -89,30 +89,30 @@ GET    /api/tasks/:id/comments?page=&size   # lista de comentários com paginaç
 │   ├── web/                     
 │   │   ├── src/                  # React + TanStack Router + shadcn + Tailwind
 │   │   ├── Dockerfile   
-│   │   ├── .env.example          # variáveis de ambiente do frontend
+│   │   ├── .env                  # variáveis de ambiente do frontend
 │   │   ├── package.json              
 │   ├── api-gateway/   
 │   │   ├── src/                  # HTTP + WebSocket + Swagger
 │   │   ├── Dockerfile
-│   │   ├── .env.example          # variáveis do API Gateway (Nest.js)
+│   │   ├── .env                  # variáveis do API Gateway (Nest.js)
 │   │   ├── package.json
 │   ├── auth-service/            
 │   │   ├── src/                  # Nest.js (microserviço de autenticação)
 │   │   ├── migrations/
 │   │   ├── Dockerfile
-│   │   ├── .env.example          # variáveis do serviço de autenticação
+│   │   ├── .env                  # variáveis do serviço de autenticação
 │   │   ├── package.json
 │   ├── tasks-service/   
 │   │   ├── src/                  # Nest.js (microserviço RabbitMQ)
 │   │   ├── migrations/
 │   │   ├── Dockerfile        
-│   │   ├── .env.example          # variáveis do serviço de tarefas
+│   │   ├── .env                  # variáveis do serviço de tarefas
 │   │   ├── package.json
 │   └── notifications-service/   
 │       ├── src/                  # Nest.js (microserviço RabbitMQ + WebSocket)
 │       ├── migrations/
 │       ├── Dockerfile
-│       ├── .env.example          # variáveis do serviço de notificações
+│       ├── .env                 # variáveis do serviço de notificações
 │       ├── package.json                
 ├── packages/
 │   ├── types/                   

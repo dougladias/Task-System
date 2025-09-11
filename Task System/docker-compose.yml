@@ -1,116 +1,25 @@
 services:
-  # Frontend React Application
-  web:
-    container_name: web
-    build:
-      context: .
-      dockerfile: ./app/web/Dockerfile
-      target: development
-    ports:
-      - '3000:3000'
-    environment:
-      - NODE_ENV=development
-    networks:
-      - challenge-network
-    command: npm run dev -- --host 0.0.0.0
-
-  # API Gateway
-  api-gateway:
-    container_name: api-gateway
-    build:
-      context: .
-      dockerfile: ./app/api-gateway/Dockerfile
-      target: development
-    ports:
-      - '3001:3001'
-    volumes:
-      - .:/app
-      - ./packages:/app/packages
-      - /app/node_modules
-      - /app/app/api-gateway/node_modules
-    environment:
-      - NODE_ENV=development
-      - PORT=3001
-    depends_on:
-      db:
-        condition: service_started
-      rabbitmq:
-        condition: service_started
-    networks:
-      - challenge-network
-
   # Auth Service
   auth-service:
     container_name: auth-service
     build:
-      context: .
-      dockerfile: ./app/auth-service/dockerfile
-      target: development
+      context: ./app/auth-service
+      dockerfile: Dockerfile.simple
     ports:
       - '3002:3002'
-    volumes:
-      - .:/app
-      - ./packages:/app/packages
-      - /app/node_modules
-      - /app/app/auth-service/node_modules
     environment:
       - NODE_ENV=development
-      - PORT=3002
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=password
+      - DATABASE_NAME=challenge_db
+      - JWT_SECRET=jwt-secret-key-change-in-production
+      - JWT_REFRESH_SECRET=jwt-refresh-secret-key-change-in-production
+      - JWT_ACCESS_EXPIRE=15m
+      - JWT_REFRESH_EXPIRE=7d
     depends_on:
-      db:
-        condition: service_started
-      rabbitmq:
-        condition: service_started
-    networks:
-      - challenge-network
-
-  # Tasks Service
-  tasks-service:
-    container_name: tasks-service
-    build:
-      context: .
-      dockerfile: ./app/tasks-service/Dockerfile
-      target: development
-    ports:
-      - '3003:3003'
-    volumes:
-      - .:/app
-      - ./packages:/app/packages
-      - /app/node_modules
-      - /app/app/tasks-service/node_modules
-    environment:
-      - NODE_ENV=development
-      - PORT=3003
-    depends_on:
-      db:
-        condition: service_started
-      rabbitmq:
-        condition: service_started
-    networks:
-      - challenge-network
-
-  # Notifications Service
-  notifications-service:
-    container_name: notifications-service
-    build:
-      context: .
-      dockerfile: ./app/notifications-service/Dockerfile
-      target: development
-    ports:
-      - '3004:3004'
-    volumes:
-      - .:/app
-      - ./packages:/app/packages
-      - /app/node_modules
-      - /app/app/notifications-service/node_modules
-    environment:
-      - NODE_ENV=development
-      - PORT=3004
-    depends_on:
-      db:
-        condition: service_started
-      rabbitmq:
-        condition: service_started
+      - db
     networks:
       - challenge-network
 
@@ -118,7 +27,6 @@ services:
   db:
     image: postgres:17.5-alpine3.21
     container_name: db
-    attach: false
     ports:
       - '5432:5432'
     networks:
@@ -131,26 +39,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: challenge_db
 
-  # RabbitMQ
-  rabbitmq:
-    image: rabbitmq:3.13-management-alpine
-    container_name: rabbitmq
-    attach: false
-    restart: always
-    ports:
-      - '5672:5672'
-      - '15672:15672'
-    networks:
-      - challenge-network
-    environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin
-    volumes: ['rabbitmq_data:/var/lib/rabbitmq']
-
 volumes:
   postgres_data:
-    driver: local
-  rabbitmq_data:
     driver: local
 
 networks:

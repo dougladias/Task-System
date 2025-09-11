@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner, Table, Index } from 'typeorm';
+import { MigrationInterface, QueryRunner, Table, TableIndex } from 'typeorm';
 
 export class CreateUserTable1704819600000 implements MigrationInterface {
   name = 'CreateUserTable1704819600000';
@@ -62,23 +62,30 @@ export class CreateUserTable1704819600000 implements MigrationInterface {
     // Create indexes for better performance
     await queryRunner.createIndex(
       'users',
-      new Index('IDX_USER_EMAIL', ['email']),
+      new TableIndex({
+        name: 'IDX_USER_EMAIL',
+        columnNames: ['email'],
+      }),
     );
 
     await queryRunner.createIndex(
       'users',
-      new Index('IDX_USER_USERNAME', ['username']),
+      new TableIndex({
+        name: 'IDX_USER_USERNAME',
+        columnNames: ['username'],
+      }),
     );
 
     await queryRunner.createIndex(
       'users',
-      new Index('IDX_USER_ACTIVE', ['isActive']),
+      new TableIndex({
+        name: 'IDX_USER_ACTIVE',
+        columnNames: ['isActive'],
+      }),
     );
 
     // Enable UUID extension if not exists
-    await queryRunner.query(
-      'CREATE EXTENSION IF NOT EXISTS "uuid-ossp"',
-    );
+    await queryRunner.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

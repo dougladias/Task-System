@@ -1,5 +1,4 @@
 import { DataSource } from 'typeorm';
-import { User } from '../users/entities/user.entity';
 import * as dotenv from 'dotenv';
 
 // Load environment variables
@@ -12,9 +11,9 @@ export const AppDataSource = new DataSource({
   username: process.env.DATABASE_USER || 'postgres',
   password: process.env.DATABASE_PASSWORD || 'password',
   database: process.env.DATABASE_NAME || 'challenge_db',
-  entities: [User],
-  migrations: ['src/migrations/*.ts'],
+  entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+  migrations: [__dirname + '/../migrations/*{.ts,.js}'],
   migrationsTableName: 'migrations',
-  synchronize: false, // Never use true in production
-  logging: process.env.NODE_ENV === 'development',
+  synchronize: false,
+  logging: false,
 });

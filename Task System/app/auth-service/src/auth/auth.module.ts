@@ -3,10 +3,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './controller/auth.controller';
+import { AuthMicroserviceController } from './controller/auth-microservice.controller';
 import { AuthService } from './service/auth.service';
 import { UsersModule } from '../users/users.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
+import { PasswordResetService } from './service/password-reset.service';
+import { AuditModule } from 'src/audit/audit.module';
 
 @Module({
   imports: [
@@ -23,9 +26,10 @@ import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
       }),
     }),
     UsersModule,
+    AuditModule,
   ],
-  controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtRefreshStrategy],
+  controllers: [AuthController, AuthMicroserviceController],
+  providers: [AuthService, PasswordResetService, JwtStrategy, JwtRefreshStrategy],
   exports: [AuthService, JwtStrategy, PassportModule],
 })
 export class AuthModule {}

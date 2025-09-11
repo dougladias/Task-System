@@ -6,12 +6,7 @@ export class AuthResponseDto {
   refreshToken: string;
   expiresIn: number;
 
-  constructor(
-    user: UserResponseDto,
-    accessToken: string,
-    refreshToken: string,
-    expiresIn: number,
-  ) {
+  constructor(user: UserResponseDto, accessToken: string, refreshToken: string, expiresIn: number) {
     this.user = user;
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;

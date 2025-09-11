@@ -6,10 +6,10 @@ export class UserResponseDto {
   username: string;
   isActive: boolean;
 
-  @Transform(({ value }) => value.toISOString())
+  @Transform(({ value }) => (value as Date).toISOString())
   createdAt: Date;
 
-  @Transform(({ value }) => value.toISOString())
+  @Transform(({ value }) => (value as Date).toISOString())
   updatedAt: Date;
 
   @Exclude()
