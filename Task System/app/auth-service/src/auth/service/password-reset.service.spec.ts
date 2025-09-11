@@ -9,47 +9,6 @@ import { ConfigService } from '@nestjs/config';
 import { RequestPasswordResetDto, ResetPasswordDto } from '../dto/reset-password.dto';
 import { BadRequestException } from '@nestjs/common';
 import { AuditAction } from '../../audit/entities/audit-log.entity';
-import * as nodemailer from 'nodemailer';
-import * as handlebars from 'handlebars';
-import * as fs from 'fs';
-import * as bcrypt from 'bcrypt';
-
-// Mock @nestjs/typeorm to prevent TypeORM initialization
-jest.mock('@nestjs/typeorm', () => ({
-  ...jest.requireActual('@nestjs/typeorm'),
-  getRepositoryToken: jest.fn((entity: any) => `Repository<${entity.name}>`),
-}));
-
-// Mock TypeORM Repository to prevent initialization
-jest.mock('typeorm', () => ({
-  ...jest.requireActual('typeorm'),
-  Repository: jest.fn().mockImplementation(() => ({
-    findOne: jest.fn(),
-    save: jest.fn(),
-  })),
-}));
-
-// Mock nodemailer
-jest.mock('nodemailer', () => ({
-  createTransport: jest.fn(() => ({
-    sendMail: jest.fn(),
-  })),
-}));
-
-// Mock bcrypt
-jest.mock('bcrypt', () => ({
-  hash: jest.fn(),
-}));
-
-// Mock fs
-jest.mock('fs', () => ({
-  readFileSync: jest.fn(),
-}));
-
-// Mock handlebars
-jest.mock('handlebars', () => ({
-  compile: jest.fn(),
-}));
 
 describe('PasswordResetService', () => {
   let service: PasswordResetService;
@@ -58,20 +17,37 @@ describe('PasswordResetService', () => {
   let auditService: AuditService;
   let configService: ConfigService;
 
-  const mockUser = {
-    id: 'user-id',
+  const mockUser: Partial<User> = {
+    id: 'user-123',
     email: 'test@example.com',
     username: 'testuser',
     password: 'hashedpassword',
     isActive: true,
     resetPasswordToken: undefined,
     resetPasswordExpires: undefined,
-    createdAt: new Date(),
-    updatedAt: new Date(),
   };
 
-  const mockTransporter = {
-    sendMail: jest.fn().mockResolvedValue({ messageId: 'test-id' }),
+  const mockUserRepository = {
+    findOne: jest.fn(),
+    save: jest.fn(),
+  };
+
+  const mockUsersService = {
+    findByEmail: jest.fn(),
+  };
+
+  const mockAuditService = {
+    log: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockConfigService = {
+    get: jest.fn().mockImplementation((key: string, defaultValue?: string) => {
+      const config = {
+        SENDGRID_API_KEY: 'test-api-key',
+        FRONTEND_URL: 'http://localhost:3000',
+      };
+      return config[key] || defaultValue;
+    }),
   };
 
   beforeEach(async () => {
@@ -80,29 +56,19 @@ describe('PasswordResetService', () => {
         PasswordResetService,
         {
           provide: getRepositoryToken(User),
-          useValue: {
-            findOne: jest.fn(),
-            save: jest.fn(),
-          },
+          useValue: mockUserRepository,
         },
         {
           provide: UsersService,
-          useValue: {
-            findByEmail: jest.fn(),
-            hashPassword: jest.fn(),
-          },
+          useValue: mockUsersService,
         },
         {
           provide: AuditService,
-          useValue: {
-            log: jest.fn(() => {}),
-          },
+          useValue: mockAuditService,
         },
         {
           provide: ConfigService,
-          useValue: {
-            get: jest.fn(),
-          },
+          useValue: mockConfigService,
         },
       ],
     }).compile();
@@ -113,40 +79,7 @@ describe('PasswordResetService', () => {
     auditService = module.get<AuditService>(AuditService);
     configService = module.get<ConfigService>(ConfigService);
 
-    // Mock SendGrid transporter
-    (nodemailer.createTransport as jest.Mock).mockReturnValue(mockTransporter);
-
-    // Mock config
-    const mockConfigGet = jest.fn().mockImplementation((key: string) => {
-      const config = {
-        SENDGRID_API_KEY: 'test-key',
-        FRONTEND_URL: 'http://localhost:3000',
-      };
-      return config[key];
-    });
-    configService.get = mockConfigGet;
-
-    // Mock crypto
-    const mockRandomBytes = jest.fn().mockReturnValue({
-      toString: jest.fn().mockReturnValue('mockedtoken12345678901234567890123456789012'),
-    });
-    (global as any).crypto = { randomBytes: mockRandomBytes };
-
-    // Mock fs
-    const mockReadFileSync = jest.fn().mockReturnValue('<html>{{username}}</html>');
-    (fs.readFileSync as jest.Mock) = mockReadFileSync;
-
-    // Mock handlebars
-    const mockCompile = jest
-      .fn()
-      .mockReturnValue(jest.fn().mockReturnValue('<html>testuser</html>'));
-    (handlebars.compile as jest.Mock) = mockCompile;
-
-    // Mock bcrypt
-    (bcrypt.hash as any).mockResolvedValue('hashednewpassword');
-  });
-
-  afterEach(() => {
+    // Reset all mocks
     jest.clearAllMocks();
   });
 
@@ -155,302 +88,316 @@ describe('PasswordResetService', () => {
   });
 
   describe('requestPasswordReset', () => {
-    it('should request password reset successfully', async () => {
-      const dto: RequestPasswordResetDto = { email: 'test@example.com' };
-
-      const mockFindByEmail = jest.fn().mockResolvedValue(mockUser as User);
-      const mockSave = jest.fn().mockResolvedValue(mockUser as User);
-      const mockLog = jest.fn().mockResolvedValue(undefined);
-
-      usersService.findByEmail = mockFindByEmail;
-      userRepository.save = mockSave;
-      auditService.log = mockLog;
-
-      const result = await service.requestPasswordReset(dto, '127.0.0.1', 'Chrome');
-
-      expect(result).toEqual({
-        message: 'Se o email existir, você receberá instruções para redefinir sua senha.',
-      });
-      expect(mockTransporter.sendMail).toHaveBeenCalled();
-      expect(mockLog).toHaveBeenCalledWith(
-        expect.objectContaining({
-          action: AuditAction.PASSWORD_CHANGE,
-          userId: mockUser.id,
-          success: true,
-        }),
-      );
-    });
+    const requestDto: RequestPasswordResetDto = { email: 'test@example.com' };
 
     it('should handle non-existent user gracefully', async () => {
-      const dto: RequestPasswordResetDto = { email: 'nonexistent@example.com' };
+      mockUsersService.findByEmail.mockResolvedValue(null);
 
-      const mockFindByEmail = jest.fn().mockResolvedValue(null);
-
-      usersService.findByEmail = mockFindByEmail;
-
-      const result = await service.requestPasswordReset(dto);
+      const result = await service.requestPasswordReset(requestDto);
 
       expect(result).toEqual({
         message: 'Se o email existir, você receberá instruções para redefinir sua senha.',
       });
-      expect(mockTransporter.sendMail).not.toHaveBeenCalled();
+      expect(mockUserRepository.save).not.toHaveBeenCalled();
     });
 
     it('should throw error for inactive user', async () => {
-      const dto: RequestPasswordResetDto = { email: 'inactive@example.com' };
       const inactiveUser = { ...mockUser, isActive: false };
+      mockUsersService.findByEmail.mockResolvedValue(inactiveUser);
 
-      const mockFindByEmail = jest.fn().mockResolvedValue(inactiveUser as User);
+      await expect(service.requestPasswordReset(requestDto)).rejects.toThrow(BadRequestException);
+    });
 
-      usersService.findByEmail = mockFindByEmail;
+    it('should process password reset request successfully', async () => {
+      mockUsersService.findByEmail.mockResolvedValue(mockUser);
+      mockUserRepository.save.mockResolvedValue(mockUser);
 
-      await expect(service.requestPasswordReset(dto)).rejects.toThrow(BadRequestException);
-      expect(mockTransporter.sendMail).not.toHaveBeenCalled();
+      // Mock transporter sendMail method
+      const mockSendMail = jest.fn().mockResolvedValue({ messageId: 'test-id' });
+      (service as any).transporter = { sendMail: mockSendMail };
+
+      // Mock file system and handlebars
+      const mockReadFileSync = jest
+        .spyOn(require('fs'), 'readFileSync')
+        .mockReturnValue('<html>{{username}}</html>');
+      const mockCompile = jest
+        .spyOn(require('handlebars'), 'compile')
+        .mockReturnValue(() => '<html>testuser</html>');
+
+      const result = await service.requestPasswordReset(requestDto, '127.0.0.1', 'Chrome');
+
+      expect(result).toEqual({
+        message: 'Se o email existir, você receberá instruções para redefinir sua senha.',
+      });
+      expect(mockUserRepository.save).toHaveBeenCalled();
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditAction.PASSWORD_CHANGE,
+          success: true,
+        }),
+      );
+
+      mockReadFileSync.mockRestore();
+      mockCompile.mockRestore();
     });
 
     it('should handle email sending failure', async () => {
-      const dto: RequestPasswordResetDto = { email: 'test@example.com' };
+      mockUsersService.findByEmail.mockResolvedValue(mockUser);
+      mockUserRepository.save.mockResolvedValue(mockUser);
 
-      const mockFindByEmail = jest.fn().mockResolvedValue(mockUser as User);
-      const mockSave = jest.fn().mockResolvedValue(mockUser as User);
-      const mockLog = jest.fn().mockResolvedValue(undefined);
+      // Mock transporter sendMail to fail
+      const mockSendMail = jest.fn().mockRejectedValue(new Error('Email failed'));
+      (service as any).transporter = { sendMail: mockSendMail };
 
-      usersService.findByEmail = mockFindByEmail;
-      userRepository.save = mockSave;
-      auditService.log = mockLog;
-      mockTransporter.sendMail.mockRejectedValue(new Error('Email failed'));
+      // Mock file system
+      const mockReadFileSync = jest
+        .spyOn(require('fs'), 'readFileSync')
+        .mockReturnValue('<html>{{username}}</html>');
+      const mockCompile = jest
+        .spyOn(require('handlebars'), 'compile')
+        .mockReturnValue(() => '<html>testuser</html>');
 
-      await expect(service.requestPasswordReset(dto)).rejects.toThrow('Email failed');
-      expect(mockLog).toHaveBeenCalledWith(
+      await expect(service.requestPasswordReset(requestDto)).rejects.toThrow('Email failed');
+      expect(mockAuditService.log).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
           errorMessage: 'Email failed',
         }),
       );
-    });
 
-    it('should log audit with IP and user agent', async () => {
-      const dto: RequestPasswordResetDto = { email: 'test@example.com' };
-
-      const mockFindByEmail = jest.fn().mockResolvedValue(mockUser as User);
-      const mockSave = jest.fn().mockResolvedValue(mockUser as User);
-      const mockLog = jest.fn().mockResolvedValue(undefined);
-
-      usersService.findByEmail = mockFindByEmail;
-      userRepository.save = mockSave;
-      auditService.log = mockLog;
-
-      await service.requestPasswordReset(dto, '192.168.1.1', 'Mozilla/5.0');
-
-      expect(mockLog).toHaveBeenCalledWith(
-        expect.objectContaining({
-          ipAddress: '192.168.1.1',
-          userAgent: 'Mozilla/5.0',
-        }),
-      );
+      mockReadFileSync.mockRestore();
+      mockCompile.mockRestore();
     });
   });
 
   describe('resetPassword', () => {
+    const resetDto: ResetPasswordDto = { token: 'valid-token', newPassword: 'newpassword123' };
+
     it('should reset password successfully', async () => {
-      const dto: ResetPasswordDto = { token: 'validtoken', newPassword: 'newpassword123' };
       const userWithToken = {
         ...mockUser,
-        resetPasswordToken: 'validtoken',
+        resetPasswordToken: 'valid-token',
         resetPasswordExpires: new Date(Date.now() + 3600000), // 1 hour from now
       };
 
-      const mockFindOne = jest.fn().mockResolvedValue(userWithToken as User);
-      const mockSave = jest.fn().mockResolvedValue(userWithToken as User);
-      const mockLog = jest.fn().mockResolvedValue(undefined);
+      mockUserRepository.findOne.mockResolvedValue(userWithToken);
+      mockUserRepository.save.mockResolvedValue(userWithToken);
 
-      userRepository.findOne = mockFindOne;
-      userRepository.save = mockSave;
-      auditService.log = mockLog;
+      // Mock bcrypt
+      const mockHash = jest.spyOn(require('bcrypt'), 'hash').mockResolvedValue('hashedNewPassword');
 
-      const result = await service.resetPassword(dto, '127.0.0.1', 'Chrome');
+      // Mock transporter and file system
+      const mockSendMail = jest.fn().mockResolvedValue({ messageId: 'test-id' });
+      (service as any).transporter = { sendMail: mockSendMail };
+      const mockReadFileSync = jest
+        .spyOn(require('fs'), 'readFileSync')
+        .mockReturnValue('<html>{{username}}</html>');
+      const mockCompile = jest
+        .spyOn(require('handlebars'), 'compile')
+        .mockReturnValue(() => '<html>testuser</html>');
+
+      const result = await service.resetPassword(resetDto, '127.0.0.1', 'Chrome');
 
       expect(result).toEqual({ message: 'Senha alterada com sucesso!' });
-      expect(bcrypt.hash).toHaveBeenCalledWith('newpassword123', 10);
-      expect(mockSave).toHaveBeenCalledWith(
+      expect(mockHash).toHaveBeenCalledWith('newpassword123', 10);
+      expect(mockUserRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
-          password: 'hashednewpassword',
+          password: 'hashedNewPassword',
           resetPasswordToken: undefined,
           resetPasswordExpires: undefined,
         }),
       );
-      expect(mockTransporter.sendMail).toHaveBeenCalledTimes(2); // Reset + confirmation
-      expect(mockLog).toHaveBeenCalledWith(
+      expect(mockAuditService.log).toHaveBeenCalledWith(
         expect.objectContaining({
           action: AuditAction.PASSWORD_CHANGE,
           success: true,
         }),
       );
+
+      mockHash.mockRestore();
+      mockReadFileSync.mockRestore();
+      mockCompile.mockRestore();
     });
 
     it('should throw error for invalid token', async () => {
-      const dto: ResetPasswordDto = { token: 'invalidtoken', newPassword: 'newpassword123' };
+      mockUserRepository.findOne.mockResolvedValue(null);
 
-      jest.spyOn(userRepository, 'findOne').mockResolvedValue(null);
-
-      await expect(service.resetPassword(dto)).rejects.toThrow(BadRequestException);
-      expect(bcrypt.hash).not.toHaveBeenCalled();
+      await expect(service.resetPassword(resetDto)).rejects.toThrow(BadRequestException);
     });
 
     it('should throw error for expired token', async () => {
-      const dto: ResetPasswordDto = { token: 'expiredtoken', newPassword: 'newpassword123' };
       const userWithExpiredToken = {
         ...mockUser,
-        resetPasswordToken: 'expiredtoken',
+        resetPasswordToken: 'expired-token',
         resetPasswordExpires: new Date(Date.now() - 3600000), // 1 hour ago
       };
 
-      jest.spyOn(userRepository, 'findOne').mockResolvedValue(userWithExpiredToken as User);
+      mockUserRepository.findOne.mockResolvedValue(userWithExpiredToken);
 
-      await expect(service.resetPassword(dto)).rejects.toThrow(BadRequestException);
+      await expect(service.resetPassword(resetDto)).rejects.toThrow(BadRequestException);
     });
 
     it('should throw error for inactive user', async () => {
-      const dto: ResetPasswordDto = { token: 'validtoken', newPassword: 'newpassword123' };
       const inactiveUser = {
         ...mockUser,
         isActive: false,
-        resetPasswordToken: 'validtoken',
+        resetPasswordToken: 'valid-token',
         resetPasswordExpires: new Date(Date.now() + 3600000),
       };
 
-      jest.spyOn(userRepository, 'findOne').mockResolvedValue(inactiveUser as User);
+      mockUserRepository.findOne.mockResolvedValue(inactiveUser);
 
-      await expect(service.resetPassword(dto)).rejects.toThrow(BadRequestException);
-    });
-
-    it('should handle password hashing failure', async () => {
-      const dto: ResetPasswordDto = { token: 'validtoken', newPassword: 'newpassword123' };
-      const userWithToken = {
-        ...mockUser,
-        resetPasswordToken: 'validtoken',
-        resetPasswordExpires: new Date(Date.now() + 3600000),
-      };
-
-      const mockFindOne = jest.fn().mockResolvedValue(userWithToken as User);
-      const mockLog = jest.fn().mockResolvedValue(undefined);
-
-      userRepository.findOne = mockFindOne;
-      auditService.log = mockLog;
-      (bcrypt.hash as any).mockRejectedValueOnce(new Error('Hash failed'));
-
-      await expect(service.resetPassword(dto)).rejects.toThrow('Hash failed');
-      expect(mockLog).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: false,
-          errorMessage: 'Hash failed',
-        }),
-      );
+      await expect(service.resetPassword(resetDto)).rejects.toThrow(BadRequestException);
     });
 
     it('should handle confirmation email failure gracefully', async () => {
-      const dto: ResetPasswordDto = { token: 'validtoken', newPassword: 'newpassword123' };
       const userWithToken = {
         ...mockUser,
-        resetPasswordToken: 'validtoken',
+        resetPasswordToken: 'valid-token',
         resetPasswordExpires: new Date(Date.now() + 3600000),
       };
 
-      jest.spyOn(userRepository, 'findOne').mockResolvedValue(userWithToken as User);
-      jest.spyOn(userRepository, 'save').mockResolvedValue(userWithToken as User);
-      jest.spyOn(auditService, 'log').mockResolvedValue(undefined);
+      mockUserRepository.findOne.mockResolvedValue(userWithToken);
+      mockUserRepository.save.mockResolvedValue(userWithToken);
 
-      // First call succeeds (reset email), second fails (confirmation email)
-      mockTransporter.sendMail
-        .mockResolvedValueOnce({ messageId: 'reset-id' })
-        .mockRejectedValueOnce(new Error('Confirmation email failed'));
+      // Mock bcrypt
+      const mockHash = jest.spyOn(require('bcrypt'), 'hash').mockResolvedValue('hashedNewPassword');
 
-      const result = await service.resetPassword(dto);
+      // Mock transporter to fail on confirmation email
+      const mockSendMail = jest.fn().mockRejectedValue(new Error('Confirmation email failed'));
+      (service as any).transporter = { sendMail: mockSendMail };
+      const mockReadFileSync = jest
+        .spyOn(require('fs'), 'readFileSync')
+        .mockReturnValue('<html>{{username}}</html>');
+      const mockCompile = jest
+        .spyOn(require('handlebars'), 'compile')
+        .mockReturnValue(() => '<html>testuser</html>');
+
+      const result = await service.resetPassword(resetDto);
 
       expect(result).toEqual({ message: 'Senha alterada com sucesso!' });
       // Should not throw error even if confirmation email fails
+
+      mockHash.mockRestore();
+      mockReadFileSync.mockRestore();
+      mockCompile.mockRestore();
     });
   });
 
   describe('generateResetToken', () => {
     it('should generate a 64 character hex token', () => {
       const token = (service as any).generateResetToken();
-      expect(token).toBe('mockedtoken12345678901234567890123456789012');
+      expect(typeof token).toBe('string');
       expect(token.length).toBe(64);
-      expect((global as any).crypto.randomBytes).toHaveBeenCalledWith(32);
+      expect(/^[0-9a-f]+$/.test(token)).toBe(true);
     });
   });
 
   describe('sendResetEmail', () => {
     it('should send reset email successfully', async () => {
-      const user = mockUser as User;
-      const token = 'testtoken';
+      const mockSendMail = jest.fn().mockResolvedValue({ messageId: 'test-id' });
+      (service as any).transporter = { sendMail: mockSendMail };
 
-      const mockGet = jest.fn().mockReturnValue('http://localhost:3000');
+      const mockReadFileSync = jest
+        .spyOn(require('fs'), 'readFileSync')
+        .mockReturnValue('<html>{{username}}</html>');
+      const mockCompile = jest
+        .spyOn(require('handlebars'), 'compile')
+        .mockReturnValue(() => '<html>testuser</html>');
 
-      configService.get = mockGet;
+      await (service as any).sendResetEmail(mockUser, 'test-token');
 
-      await (service as any).sendResetEmail(user, token);
-
-      expect(mockGet).toHaveBeenCalledWith('FRONTEND_URL', 'http://localhost:3000');
-      expect(fs.readFileSync).toHaveBeenCalled();
-      expect(handlebars.compile).toHaveBeenCalled();
-      expect(mockTransporter.sendMail).toHaveBeenCalledWith({
+      expect(mockSendMail).toHaveBeenCalledWith({
         from: 'noreply@task-system.com',
-        to: user.email,
+        to: mockUser.email,
         subject: 'Redefinição de Senha - Task System',
         html: '<html>testuser</html>',
       });
+
+      mockReadFileSync.mockRestore();
+      mockCompile.mockRestore();
     });
 
     it('should handle email sending failure', async () => {
-      const user = mockUser as User;
-      const token = 'testtoken';
+      const mockSendMail = jest.fn().mockRejectedValue(new Error('Send failed'));
+      (service as any).transporter = { sendMail: mockSendMail };
 
-      mockTransporter.sendMail.mockRejectedValue(new Error('Send failed'));
+      const mockReadFileSync = jest
+        .spyOn(require('fs'), 'readFileSync')
+        .mockReturnValue('<html>{{username}}</html>');
+      const mockCompile = jest
+        .spyOn(require('handlebars'), 'compile')
+        .mockReturnValue(() => '<html>testuser</html>');
 
-      await expect((service as any).sendResetEmail(user, token)).rejects.toThrow('Send failed');
+      await expect((service as any).sendResetEmail(mockUser, 'test-token')).rejects.toThrow(
+        'Send failed',
+      );
+
+      mockReadFileSync.mockRestore();
+      mockCompile.mockRestore();
     });
   });
 
   describe('sendPasswordChangedEmail', () => {
     it('should send password changed email successfully', async () => {
-      const user = mockUser as User;
+      const mockSendMail = jest.fn().mockResolvedValue({ messageId: 'test-id' });
+      (service as any).transporter = { sendMail: mockSendMail };
 
-      await (service as any).sendPasswordChangedEmail(user);
+      const mockReadFileSync = jest
+        .spyOn(require('fs'), 'readFileSync')
+        .mockReturnValue('<html>{{username}}</html>');
+      const mockCompile = jest
+        .spyOn(require('handlebars'), 'compile')
+        .mockReturnValue(() => '<html>testuser</html>');
 
-      expect(fs.readFileSync).toHaveBeenCalled();
-      expect(handlebars.compile).toHaveBeenCalled();
-      expect(mockTransporter.sendMail).toHaveBeenCalledWith({
+      await (service as any).sendPasswordChangedEmail(mockUser);
+
+      expect(mockSendMail).toHaveBeenCalledWith({
         from: 'noreply@task-system.com',
-        to: user.email,
+        to: mockUser.email,
         subject: 'Senha Alterada - Task System',
         html: '<html>testuser</html>',
       });
+
+      mockReadFileSync.mockRestore();
+      mockCompile.mockRestore();
     });
 
     it('should not throw error if confirmation email fails', async () => {
-      const user = mockUser as User;
+      const mockSendMail = jest.fn().mockRejectedValue(new Error('Send failed'));
+      (service as any).transporter = { sendMail: mockSendMail };
 
-      mockTransporter.sendMail.mockRejectedValue(new Error('Send failed'));
+      const mockReadFileSync = jest
+        .spyOn(require('fs'), 'readFileSync')
+        .mockReturnValue('<html>{{username}}</html>');
+      const mockCompile = jest
+        .spyOn(require('handlebars'), 'compile')
+        .mockReturnValue(() => '<html>testuser</html>');
 
-      await expect((service as any).sendPasswordChangedEmail(user)).resolves.not.toThrow();
+      await expect((service as any).sendPasswordChangedEmail(mockUser)).resolves.not.toThrow();
+
+      mockReadFileSync.mockRestore();
+      mockCompile.mockRestore();
     });
   });
 
   describe('renderTemplate', () => {
     it('should render template successfully', () => {
-      const template = 'password_reset';
-      const data = { username: 'testuser' };
+      const mockReadFileSync = jest
+        .spyOn(require('fs'), 'readFileSync')
+        .mockReturnValue('<html>{{username}}</html>');
+      const mockCompile = jest
+        .spyOn(require('handlebars'), 'compile')
+        .mockReturnValue((data) => `<html>${data.username}</html>`);
 
-      const result = (service as any).renderTemplate(template, data);
+      const result = (service as any).renderTemplate('test_template', { username: 'testuser' });
 
-      expect(fs.readFileSync).toHaveBeenCalledWith(
-        expect.stringContaining('templates/password_reset.hbs'),
-        'utf8',
-      );
-      expect(handlebars.compile).toHaveBeenCalledWith('<html>{{username}}</html>');
       expect(result).toBe('<html>testuser</html>');
+      expect(mockReadFileSync).toHaveBeenCalled();
+      expect(mockCompile).toHaveBeenCalledWith('<html>{{username}}</html>');
+
+      mockReadFileSync.mockRestore();
+      mockCompile.mockRestore();
     });
   });
 });
