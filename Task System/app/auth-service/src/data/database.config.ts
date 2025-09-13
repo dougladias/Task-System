@@ -9,7 +9,7 @@ export const getDatabaseConfig = (configService: ConfigService): TypeOrmModuleOp
   password: configService.get('DATABASE_PASSWORD', 'password'),
   database: configService.get('DATABASE_NAME', 'challenge_db'),
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-  migrations: [__dirname + '/../../migrations/*{.ts,.js}'],
+  migrations: [__dirname + '/../migrations/*{.ts,.js}'],
   synchronize: false, // Always false - use migrations instead
   logging: configService.get('NODE_ENV') === 'development',
 });

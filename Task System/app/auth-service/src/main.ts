@@ -4,10 +4,16 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
+import { DataSource } from 'typeorm';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Run migrations automatically
+  const dataSource = app.get(DataSource);
+  await dataSource.runMigrations();
+  console.log('✅ Database migrations completed');
 
   // Configurar RabbitMQ microservice
   const configService = app.get(ConfigService);
@@ -65,12 +71,7 @@ async function bootstrap() {
     },
   });
 
-  // CORS if needed
-  app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  });
+  // CORS removed - API Gateway will handle this
 
   const port = process.env.PORT || 3002;
   await app.startAllMicroservices();

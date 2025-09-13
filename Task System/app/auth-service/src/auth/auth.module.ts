@@ -12,6 +12,7 @@ import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { PasswordResetService } from './service/password-reset.service';
 import { AuditModule } from 'src/audit/audit.module';
 import { User } from '../users/entities/user.entity';
+import { KafkaProducerService } from '../kafka/kafka.producer';
 
 @Module({
   imports: [
@@ -32,7 +33,7 @@ import { User } from '../users/entities/user.entity';
     AuditModule,
   ],
   controllers: [AuthController, AuthMicroserviceController],
-  providers: [AuthService, PasswordResetService, JwtStrategy, JwtRefreshStrategy],
+  providers: [AuthService, PasswordResetService, JwtStrategy, JwtRefreshStrategy, KafkaProducerService],
   exports: [AuthService, JwtStrategy, PassportModule],
 })
 export class AuthModule {}

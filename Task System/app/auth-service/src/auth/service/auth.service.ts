@@ -16,6 +16,7 @@ import { UserResponseDto } from '../../users/dto/user-response.dto';
 import { JwtPayload } from '../strategies/jwt.strategy';
 import { AuditService } from '../../audit/service/audit.service';
 import { AuditAction, AuditResource } from '../../audit/entities/audit-log.entity';
+import { KafkaProducerService } from '../../kafka/kafka.producer';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +28,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: any,
     private readonly auditService: AuditService,
+    private readonly kafkaProducer: KafkaProducerService,
   ) {}
 
   async register(
@@ -52,6 +54,18 @@ export class AuthService {
         description: `Novo usuário registrado: ${user.username}`,
         success: true,
       });
+
+      // Publicar evento Kafka
+      try {
+        await this.kafkaProducer.publishUserRegistered({
+          userId: user.id,
+          email: user.email,
+          username: user.username,
+          createdAt: user.createdAt,
+        });
+      } catch (kafkaError) {
+        this.logger.warn(`Failed to publish user registered event: ${kafkaError.message}`);
+      }
 
       return this.generateTokens(userResponse);
     } catch (error) {
@@ -122,6 +136,20 @@ export class AuthService {
         description: `Login realizado: ${user.username}`,
         success: true,
       });
+
+      // Publicar evento Kafka
+      try {
+        await this.kafkaProducer.publishUserLoggedIn({
+          userId: user.id,
+          email: user.email,
+          username: user.username,
+          loginAt: new Date(),
+          ipAddress,
+          userAgent,
+        });
+      } catch (kafkaError) {
+        this.logger.warn(`Failed to publish user logged in event: ${kafkaError.message}`);
+      }
 
       return this.generateTokens(userResponse);
     } catch (error) {

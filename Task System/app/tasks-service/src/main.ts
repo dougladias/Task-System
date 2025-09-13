@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
 
 declare global {
   var crypto: Crypto;
@@ -16,7 +17,11 @@ if (!global.crypto) {
 async function bootstrap() {
   // Create HTTP application
   const app = await NestFactory.create(AppModule);
-  app.enableCors();
+
+  // Get config service
+  const configService = app.get(ConfigService);
+
+  // CORS removed - API Gateway will handle this
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   // Setup Swagger
@@ -31,12 +36,14 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  // Configure microservice
+  // Configure microservice like auth-service
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
     options: {
-      urls: [process.env.RABBITMQ_URL || 'amqp://admin:admin@localhost:5672'],
-      queue: 'tasks_queue',
+      urls: [
+        `amqp://${configService.get('rabbitmq.user')}:${configService.get('rabbitmq.password')}@${configService.get('rabbitmq.host')}:${configService.get('rabbitmq.port')}`,
+      ],
+      queue: configService.get<string>('rabbitmq.queue') || 'tasks_queue',
       queueOptions: {
         durable: true,
       },

@@ -25,6 +25,7 @@ services:
       - RABBITMQ_USER=admin
       - RABBITMQ_PASSWORD=admin
       - RABBITMQ_QUEUE=auth_queue
+      - KAFKA_BROKER=kafka:29092
     depends_on:
       - db
       - redis
@@ -58,10 +59,57 @@ services:
       - RABBITMQ_USER=admin
       - RABBITMQ_PASSWORD=admin
       - RABBITMQ_QUEUE=auth_queue
+      - KAFKA_BROKER=kafka:29092
     depends_on:
       - db
       - redis
       - rabbitmq
+      - kafka
+    networks:
+      - challenge-network
+
+  # Notifications Service
+  notifications-service:
+    container_name: notifications-service
+    build:
+      context: ./app/notifications-service
+      dockerfile: Dockerfile
+    ports:
+      - '3004:3004'
+    environment:
+      - NODE_ENV=development
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=password
+      - DATABASE_NAME=challenge_db
+      - KAFKA_BROKER=kafka:29092
+      - FRONTEND_URL=http://localhost:3000
+    depends_on:
+      - db
+      - kafka
+    networks:
+      - challenge-network
+
+  # API Gateway
+  api-gateway:
+    container_name: api-gateway
+    build:
+      context: ./app/api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - '3001:3001'
+    environment:
+      - NODE_ENV=development
+      - AUTH_SERVICE_URL=http://auth-service:3002
+      - TASKS_SERVICE_URL=http://tasks-service:3003
+      - NOTIFICATIONS_SERVICE_URL=http://notifications-service:3004
+      - JWT_SECRET=jwt-secret-key-change-in-production
+      - FRONTEND_URL=http://localhost:3000
+    depends_on:
+      - auth-service
+      - tasks-service
+      - notifications-service
     networks:
       - challenge-network
 
@@ -110,12 +158,78 @@ services:
     volumes:
       - redis_data:/data
 
+  # Zookeeper (required for Kafka)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: zookeeper
+    ports:
+      - '2181:2181'
+    networks:
+      - challenge-network
+    restart: always
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_logs:/var/lib/zookeeper/log
+
+  # Kafka
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: kafka
+    ports:
+      - '9092:9092'
+      - '9101:9101'
+    networks:
+      - challenge-network
+    restart: always
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  # Kafka UI (opcional, para administração)
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - '8080:8080'
+    networks:
+      - challenge-network
+    restart: always
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+
 volumes:
   postgres_data:
     driver: local
   rabbitmq_data:
     driver: local
   redis_data:
+    driver: local
+  zookeeper_data:
+    driver: local
+  zookeeper_logs:
+    driver: local
+  kafka_data:
     driver: local
 
 networks:

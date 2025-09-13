@@ -8,29 +8,35 @@ import {
   createRouter,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
-import FormSimpleDemo from './routes/demo.form.simple.tsx'
-import FormAddressDemo from './routes/demo.form.address.tsx'
-import StoreDemo from './routes/demo.store.tsx'
-import TableDemo from './routes/demo.table.tsx'
-import TanStackQueryDemo from './routes/demo.tanstack-query.tsx'
+import createLoginRoute from './routes/login.tsx'
+import createRegisterRoute from './routes/register.tsx'
 
 import Header from './components/Header'
+import { useAuth } from './contexts/AuthContext'
 
 import * as TanStackQueryProvider from './integrations/tanstack-query/root-provider.tsx'
+import { AuthProvider } from './contexts/AuthContext.tsx'
+import { ToastProvider } from './components/ui/toast.tsx'
 
 import './styles.css'
 import reportWebVitals from './reportWebVitals.ts'
 
 import App from './App.tsx'
 
-const rootRoute = createRootRoute({
-  component: () => (
+const RootComponent = () => {
+  const { isAuthenticated } = useAuth()
+
+  return (
     <>
-      <Header />
+      {isAuthenticated && <Header />}
       <Outlet />
       <TanStackRouterDevtools />
     </>
-  ),
+  )
+}
+
+const rootRoute = createRootRoute({
+  component: RootComponent,
 })
 
 const indexRoute = createRoute({
@@ -41,11 +47,8 @@ const indexRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
-  FormSimpleDemo(rootRoute),
-  FormAddressDemo(rootRoute),
-  StoreDemo(rootRoute),
-  TableDemo(rootRoute),
-  TanStackQueryDemo(rootRoute),
+  createLoginRoute(rootRoute),
+  createRegisterRoute(rootRoute),
 ])
 
 const TanStackQueryProviderContext = TanStackQueryProvider.getContext()
@@ -72,7 +75,11 @@ if (rootElement && !rootElement.innerHTML) {
   root.render(
     <StrictMode>
       <TanStackQueryProvider.Provider {...TanStackQueryProviderContext}>
-        <RouterProvider router={router} />
+        <ToastProvider>
+          <AuthProvider>
+            <RouterProvider router={router} />
+          </AuthProvider>
+        </ToastProvider>
       </TanStackQueryProvider.Provider>
     </StrictMode>,
   )

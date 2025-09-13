@@ -2,24 +2,41 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TerminusModule } from '@nestjs/terminus';
+import { LoggerModule } from 'nestjs-pino';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { TasksModule } from './tasks/controller/tasks.module';
-import { Task } from './tasks/entities/task.entity';
-import { Comment } from './tasks/entities/comment.entity';
-import { Audit } from './tasks/entities/audit.entity';
+import { TasksController } from './controllers/tasks.controller';
+import { CommentsController, SingleCommentController } from './controllers/comments.controller';
+import { TasksService } from './services/tasks.service';
+import { CommentsService } from './services/comments.service';
+import { KafkaProducerService } from './kafka/kafka.producer';
+import { TaskEntity } from './entities/task.entity';
+import { CommentEntity } from './entities/comment.entity';
 import { HealthController } from './health/health.controller';
 import { environmentConfig } from './config/environment';
-import { getLoggerConfig } from './config/logger.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: '.env',
       load: [environmentConfig],
     }),
-    // Logging com Pino
-    getLoggerConfig(),
+    LoggerModule.forRoot({
+      pinoHttp: {
+        level: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
+        transport:
+          process.env.NODE_ENV === 'development'
+            ? {
+                target: 'pino-pretty',
+                options: {
+                  colorize: true,
+                  singleLine: true,
+                },
+              }
+            : undefined,
+      },
+    }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -32,14 +49,24 @@ import { getLoggerConfig } from './config/logger.config';
         database: config.get('DATABASE_NAME', 'challenge_db'),
         synchronize: config.get('NODE_ENV') === 'development',
         logging: config.get('NODE_ENV') === 'development',
-        entities: [Task, Comment, Audit],
-        // keep simple for dev; migrations can be added later
+        entities: [TaskEntity, CommentEntity],
       }),
     }),
+    TypeOrmModule.forFeature([TaskEntity, CommentEntity]),
     TerminusModule,
-    TasksModule,
   ],
-  controllers: [AppController, HealthController],
-  providers: [AppService],
+  controllers: [
+    AppController,
+    HealthController,
+    TasksController,
+    CommentsController,
+    SingleCommentController,
+  ],
+  providers: [
+    AppService,
+    TasksService,
+    CommentsService,
+    KafkaProducerService,
+  ],
 })
 export class AppModule {}

@@ -11,7 +11,11 @@ export interface EnvironmentVariables {
   DATABASE_NAME: string;
 
   // RabbitMQ
-  RABBITMQ_URL: string;
+  RABBITMQ_HOST: string;
+  RABBITMQ_PORT: number;
+  RABBITMQ_USER: string;
+  RABBITMQ_PASSWORD: string;
+  RABBITMQ_QUEUE: string;
 
   // Redis
   REDIS_HOST?: string;
@@ -34,7 +38,11 @@ export const environmentConfig = () => ({
   },
 
   rabbitmq: {
-    url: process.env.RABBITMQ_URL,
+    host: process.env.RABBITMQ_HOST,
+    port: parseInt(process.env.RABBITMQ_PORT!, 10),
+    user: process.env.RABBITMQ_USER,
+    password: process.env.RABBITMQ_PASSWORD,
+    queue: process.env.RABBITMQ_QUEUE,
   },
 
   redis: {

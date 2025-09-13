@@ -1,44 +1,17 @@
-# Multi-stage build for React Web App
-FROM node:20-alpine AS base
+FROM node:20-alpine
 
-# Install dependencies only when needed
-FROM base AS deps
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package.json
+COPY package.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install ALL dependencies
+RUN npm install
 
-# Rebuild the source code only when needed
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-
-# Build the application
-RUN npm run build
-
-# Production image with Nginx
-FROM nginx:alpine AS runner
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Copy nginx config
-COPY nginx.conf /etc/nginx/nginx.conf
-
-EXPOSE 3000
-
-# Development stage
-FROM base AS development
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+# Copy source code
 COPY . .
 
 EXPOSE 3000
-CMD ["npm", "run", "dev"]
 
-# Production command
-FROM runner AS production
-CMD ["nginx", "-g", "daemon off;"]
+# Use the exact same command that works locally
+CMD ["npm", "run", "start"]
