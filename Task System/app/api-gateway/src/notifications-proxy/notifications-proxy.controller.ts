@@ -17,7 +17,7 @@ export class NotificationsProxyController {
     private readonly notificationsProxyService: NotificationsProxyService,
   ) {}
 
-  @All('*')
+  @All('*path')
   async proxyToNotifications(@Req() req: Request, @Res() res: Response) {
     try {
       const response = await this.notificationsProxyService.forwardRequest(req);

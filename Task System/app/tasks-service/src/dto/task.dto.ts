@@ -1,5 +1,6 @@
-import { IsString, IsEnum, IsOptional, IsDateString, IsArray, IsUUID } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsDateString, IsArray, IsUUID, IsNumber } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import { TaskStatus, TaskPriority } from '../entities/task.entity';
 
 export class CreateTaskDto {
@@ -111,10 +112,14 @@ export class TaskResponseDto {
 export class TaskQueryDto {
   @ApiPropertyOptional({ description: 'Page number for pagination' })
   @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
   page?: number = 1;
 
   @ApiPropertyOptional({ description: 'Items per page' })
   @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
   limit?: number = 10;
 
   @ApiPropertyOptional({ enum: TaskStatus, description: 'Filter by status' })

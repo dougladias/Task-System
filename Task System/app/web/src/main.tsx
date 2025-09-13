@@ -16,6 +16,8 @@ import { useAuth } from './contexts/AuthContext'
 
 import * as TanStackQueryProvider from './integrations/tanstack-query/root-provider.tsx'
 import { AuthProvider } from './contexts/AuthContext.tsx'
+import { TasksProvider } from './contexts/TasksContext.tsx'
+import { NotificationsProvider } from './contexts/NotificationsContext.tsx'
 import { ToastProvider } from './components/ui/toast.tsx'
 
 import './styles.css'
@@ -77,7 +79,11 @@ if (rootElement && !rootElement.innerHTML) {
       <TanStackQueryProvider.Provider {...TanStackQueryProviderContext}>
         <ToastProvider>
           <AuthProvider>
-            <RouterProvider router={router} />
+            <TasksProvider>
+              <NotificationsProvider>
+                <RouterProvider router={router} />
+              </NotificationsProvider>
+            </TasksProvider>
           </AuthProvider>
         </ToastProvider>
       </TanStackQueryProvider.Provider>

@@ -15,7 +15,7 @@ import { AuthProxyService } from './auth-proxy.service';
 export class AuthProxyController {
   constructor(private readonly authProxyService: AuthProxyService) {}
 
-  @All('*')
+  @All('*path')
   async proxyToAuth(@Req() req: Request, @Res() res: Response) {
     try {
       const response = await this.authProxyService.forwardRequest(req);

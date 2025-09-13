@@ -68,7 +68,13 @@ export class TasksService {
     page: number;
     totalPages: number;
   }> {
-    const { page = 1, limit = 10, status, priority, assignedTo, createdBy, search } = query;
+    // Garantir que page e limit sejam números válidos
+    const page = Math.max(1, Number(Array.isArray(query.page) ? query.page[0] : query.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(Array.isArray(query.limit) ? query.limit[0] : query.limit) || 10));
+
+    const { status, priority, assignedTo, createdBy, search } = query;
+
+    this.logger.log(`Getting tasks with page=${page}, limit=${limit}`);
 
     const whereConditions: FindOptionsWhere<TaskEntity> = {};
 
@@ -152,7 +158,20 @@ export class TasksService {
     userId: string,
     username: string,
   ): Promise<TaskResponseDto> {
+    this.logger.log(`Updating task ${taskId} with data:`, JSON.stringify(updateTaskDto));
+
     const task = await this.taskRepository.findOne({ where: { id: taskId } });
+
+    if (!task) {
+      throw new NotFoundException(`Task with ID ${taskId} not found`);
+    }
+
+    this.logger.log(`Task before update:`, JSON.stringify({
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      status: task.status,
+    }));
 
     if (!task) {
       throw new NotFoundException(`Task with ID ${taskId} not found`);
@@ -166,6 +185,13 @@ export class TasksService {
     Object.assign(task, updateTaskDto);
     task.updatedBy = userId;
     task.updatedByUsername = username;
+
+    this.logger.log(`Task after assign:`, JSON.stringify({
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      status: task.status,
+    }));
 
     if (updateTaskDto.dueDate) {
       task.dueDate = new Date(updateTaskDto.dueDate);

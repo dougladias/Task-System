@@ -236,7 +236,7 @@ function RegisterPage() {
             <Button
               type="submit"
               disabled={isSubmitting || isLoading}
-              className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 cursor-pointer"
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
@@ -272,7 +272,7 @@ function RegisterPage() {
               type="button"
               variant="outline"
               onClick={() => navigate({ to: '/login' })}
-              className="bg-transparent border-green-500/50 text-green-400 hover:bg-green-500/10 hover:border-green-500 transition-all duration-200"
+              className="bg-transparent border-green-500/50 text-green-400 hover:bg-green-500/10 hover:border-green-500 transition-all duration-200 cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Fazer login

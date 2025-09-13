@@ -9,12 +9,20 @@ export const apiConfig = {
       refresh: '/auth/refresh'
     },
     tasks: {
+      base: '/tasks',
       list: '/tasks',
       create: '/tasks',
       detail: '/tasks/:id',
       update: '/tasks/:id',
       delete: '/tasks/:id',
-      comments: '/tasks/:id/comments'
+      comments: '/tasks/:id/comments',
+      stats: '/tasks/stats'
+    },
+    notifications: {
+      base: '/notifications',
+      list: '/notifications',
+      markAsRead: '/notifications/:id/read',
+      markAllAsRead: '/notifications/read-all'
     }
   }
 }

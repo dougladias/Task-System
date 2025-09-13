@@ -14,7 +14,9 @@ export class AuthProxyService {
   }
 
   async forwardRequest(req: Request) {
-    const path = req.url.replace('/api/auth', '');
+    // Remove /api/auth e extrai apenas o path sem query params
+    const fullPath = req.url.replace('/api/auth', '');
+    const [path] = fullPath.split('?');
     const url = `${this.authServiceUrl}/auth${path}`;
 
     const config = {

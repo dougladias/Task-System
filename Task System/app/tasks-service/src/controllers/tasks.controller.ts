@@ -11,6 +11,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { randomUUID } from 'crypto';
 import { TasksService } from '../services/tasks.service';
 import { CreateTaskDto, UpdateTaskDto, TaskResponseDto, TaskQueryDto } from '../dto/task.dto';
 
@@ -35,7 +36,7 @@ export class TasksController {
   ): Promise<TaskResponseDto> {
     // Por enquanto, vou usar headers mockados
     // Em produção, você extrairia do JWT: const { userId, username } = req.user;
-    const userId = req.headers['x-user-id'] || 'mock-user-id';
+    const userId = req.headers['x-user-id'] || randomUUID();
     const username = req.headers['x-username'] || 'Mock User';
 
     return this.tasksService.createTask(createTaskDto, userId, username);
@@ -84,7 +85,7 @@ export class TasksController {
     @Body() updateTaskDto: UpdateTaskDto,
     @Request() req: any,
   ): Promise<TaskResponseDto> {
-    const userId = req.headers['x-user-id'] || 'mock-user-id';
+    const userId = req.headers['x-user-id'] || randomUUID();
     const username = req.headers['x-username'] || 'Mock User';
 
     return this.tasksService.updateTask(taskId, updateTaskDto, userId, username);
@@ -97,7 +98,7 @@ export class TasksController {
     description: 'Task deleted successfully',
   })
   async deleteTask(@Param('id') taskId: string, @Request() req: any): Promise<{ message: string }> {
-    const userId = req.headers['x-user-id'] || 'mock-user-id';
+    const userId = req.headers['x-user-id'] || randomUUID();
     const username = req.headers['x-username'] || 'Mock User';
 
     await this.tasksService.deleteTask(taskId, userId, username);
@@ -116,7 +117,7 @@ export class TasksController {
     @Param('userId') userIdToAssign: string,
     @Request() req: any,
   ): Promise<TaskResponseDto> {
-    const userId = req.headers['x-user-id'] || 'mock-user-id';
+    const userId = req.headers['x-user-id'] || randomUUID();
     const username = req.headers['x-username'] || 'Mock User';
 
     return this.tasksService.assignUserToTask(taskId, userIdToAssign, userId, username);

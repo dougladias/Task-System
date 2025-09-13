@@ -14,7 +14,9 @@ export class TasksProxyService {
   }
 
   async forwardRequest(req: Request) {
-    const path = req.url.replace('/api/tasks', '');
+    // Remove /api/tasks e extrai apenas o path sem query params
+    const fullPath = req.url.replace('/api/tasks', '');
+    const [path] = fullPath.split('?');
     const url = `${this.tasksServiceUrl}/tasks${path}`;
 
     const config = {
