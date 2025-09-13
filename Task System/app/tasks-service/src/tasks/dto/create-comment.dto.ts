@@ -1,13 +1,22 @@
-import { IsString, IsUUID, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsUUID,
+  IsOptional,
+  IsNotEmpty,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateCommentDto {
-  @IsUUID()
+  @IsNotEmpty()
+  @IsUUID('4')
   taskId: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsUUID('4')
   authorId?: string;
 
+  @IsNotEmpty()
   @IsString()
+  @MaxLength(1000)
   content: string;
 }

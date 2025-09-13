@@ -4,7 +4,7 @@ services:
     container_name: auth-service
     build:
       context: ./app/auth-service
-      dockerfile: Dockerfile.simple
+      dockerfile: Dockerfile
     ports:
       - '3002:3002'
     environment:
@@ -18,8 +18,50 @@ services:
       - JWT_REFRESH_SECRET=jwt-refresh-secret-key-change-in-production
       - JWT_ACCESS_EXPIRE=15m
       - JWT_REFRESH_EXPIRE=7d
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=admin
+      - RABBITMQ_PASSWORD=admin
+      - RABBITMQ_QUEUE=auth_queue
     depends_on:
       - db
+      - redis
+      - rabbitmq
+    networks:
+      - challenge-network
+
+  # Tasks Service
+  tasks-service:
+    container_name: tasks-service
+    build:
+      context: ./app/tasks-service
+      dockerfile: Dockerfile
+    ports:
+      - '3003:3003'
+    environment:
+      - NODE_ENV=development
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=password
+      - DATABASE_NAME=challenge_db
+      - JWT_SECRET=jwt-secret-key-change-in-production
+      - JWT_REFRESH_SECRET=jwt-refresh-secret-key-change-in-production
+      - JWT_ACCESS_EXPIRE=15m
+      - JWT_REFRESH_EXPIRE=7d
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=admin
+      - RABBITMQ_PASSWORD=admin
+      - RABBITMQ_QUEUE=auth_queue
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
     networks:
       - challenge-network
 
@@ -39,8 +81,41 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: challenge_db
 
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: rabbitmq
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    networks:
+      - challenge-network
+    restart: always
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+      RABBITMQ_DEFAULT_VHOST: /
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - '6379:6379'
+    networks:
+      - challenge-network
+    restart: always
+    volumes:
+      - redis_data:/data
+
 volumes:
   postgres_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  redis_data:
     driver: local
 
 networks:

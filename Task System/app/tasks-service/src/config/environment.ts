@@ -1,0 +1,47 @@
+export interface EnvironmentVariables {
+  // General
+  NODE_ENV: 'development' | 'production' | 'test';
+  PORT: number;
+
+  // Database
+  DATABASE_HOST: string;
+  DATABASE_PORT: number;
+  DATABASE_USER: string;
+  DATABASE_PASSWORD: string;
+  DATABASE_NAME: string;
+
+  // RabbitMQ
+  RABBITMQ_URL: string;
+
+  // Redis
+  REDIS_HOST?: string;
+  REDIS_PORT?: number;
+  REDIS_PASSWORD?: string;
+  REDIS_DATABASE?: number;
+  REDIS_TTL?: number;
+}
+
+export const environmentConfig = () => ({
+  nodeEnv: process.env.NODE_ENV,
+  port: parseInt(process.env.PORT!, 10),
+
+  database: {
+    host: process.env.DATABASE_HOST,
+    port: parseInt(process.env.DATABASE_PORT!, 10),
+    user: process.env.DATABASE_USER,
+    password: process.env.DATABASE_PASSWORD,
+    name: process.env.DATABASE_NAME,
+  },
+
+  rabbitmq: {
+    url: process.env.RABBITMQ_URL,
+  },
+
+  redis: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379', 10),
+    password: process.env.REDIS_PASSWORD,
+    database: parseInt(process.env.REDIS_DATABASE || '0', 10),
+    ttl: parseInt(process.env.REDIS_TTL || '900', 10), // 15 minutos
+  },
+});
