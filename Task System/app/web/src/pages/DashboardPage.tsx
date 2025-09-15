@@ -326,7 +326,7 @@ export default function DashboardPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsCreateModalOpen(true)}
-                  className="text-gray-400 hover:text-white p-1 cursor-pointer"
+                  className="text-gray-400 p-1 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
                 </Button>
@@ -348,9 +348,9 @@ export default function DashboardPage() {
                     console.log('Botão Adicionar tarefa clicado!')
                     setIsCreateModalOpen(true)
                   }}
-                  className="relative z-40 w-full p-3 border-2 border-dashed border-gray-700 rounded-xl text-gray-400 hover:text-white hover:border-gray-600 transition-all duration-200 text-sm flex items-center justify-center gap-2 mt-3 cursor-pointer bg-transparent"
+                  className="relative z-40 w-full p-3 border-2 border-dashed border-gray-700 rounded-xl text-gray-400 hover:text-gray-300 hover:border-gray-600 transition-all duration-200 text-sm flex items-center justify-center gap-2 mt-3 cursor-pointer bg-transparent"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-4 h-4" style={{ pointerEvents: 'none' }} />
                   Adicionar tarefa
                 </button>
               </div>
