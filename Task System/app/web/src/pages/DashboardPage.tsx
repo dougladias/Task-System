@@ -11,6 +11,8 @@ export default function DashboardPage() {
   const { showToast } = useToast()
   const [searchTerm, setSearchTerm] = useState('')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  
+  console.log('Estado do modal:', isCreateModalOpen)
   const [filters, setFilters] = useState({
     status: '',
     priority: ''
@@ -162,7 +164,10 @@ export default function DashboardPage() {
             </div>
           ))}
           {task.assignedUsernames && task.assignedUsernames.length > 3 && (
-            <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs border-2 border-gray-800">
+            <div 
+              className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs border-2 border-gray-800"
+              style={{ cursor: 'pointer !important', zIndex: 1 }}
+            >
               +{task.assignedUsernames.length - 3}
             </div>
           )}
@@ -241,7 +246,10 @@ export default function DashboardPage() {
                   Filtros
                 </Button>
                 <Button
-                  onClick={() => setIsCreateModalOpen(true)}
+                  onClick={() => {
+                    console.log('Botão Nova Tarefa clicado!')
+                    setIsCreateModalOpen(true)
+                  }}
                   className="flex-1 sm:flex-none bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 cursor-pointer"
                 >
                   <Plus className="w-4 h-4 mr-2" />
@@ -304,7 +312,7 @@ export default function DashboardPage() {
       <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 py-6 h-[calc(100vh-280px)]">
           {columns.map((column) => (
-            <div key={column.id} className="flex flex-col min-h-0">
+            <div key={column.id} className="relative z-10 flex flex-col min-h-0">
               {/* Column Header */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -325,15 +333,22 @@ export default function DashboardPage() {
               </div>
 
               {/* Column Cards */}
-              <div className="flex-1 space-y-0 overflow-y-auto">
-                {column.tasks.map((task) => (
-                  <TaskCard key={task.id} task={task} />
-                ))}
+              <div className="flex-1 overflow-y-auto" style={{ pointerEvents: 'all' }}>
+                <div className="space-y-3">
+                  {column.tasks.map((task) => (
+                    <TaskCard key={task.id} task={task} />
+                  ))}
+                </div>
 
                 {/* Add Card Button */}
                 <button
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="w-full p-3 border-2 border-dashed border-gray-700 rounded-xl text-gray-400 hover:text-white hover:border-gray-600 transition-all duration-200 text-sm flex items-center justify-center gap-2 mt-3 cursor-pointer"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    console.log('Botão Adicionar tarefa clicado!')
+                    setIsCreateModalOpen(true)
+                  }}
+                  className="relative z-40 w-full p-3 border-2 border-dashed border-gray-700 rounded-xl text-gray-400 hover:text-white hover:border-gray-600 transition-all duration-200 text-sm flex items-center justify-center gap-2 mt-3 cursor-pointer bg-transparent"
                 >
                   <Plus className="w-4 h-4" />
                   Adicionar tarefa

@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { X, Calendar, AlertCircle, User } from 'lucide-react'
+import { AlertCircle, Calendar, User, X } from 'lucide-react'
+import { useTasks } from '../contexts/TasksContext'
+import { useAuth } from '../contexts/AuthContext'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
-import { useTasks } from '../contexts/TasksContext'
 import { useToast } from './ui/toast'
-import { useAuth } from '../contexts/AuthContext'
 
 const createTaskSchema = z.object({
   title: z.string().min(3, 'Título deve ter pelo menos 3 caracteres'),
@@ -71,16 +71,6 @@ export default function CreateTaskModal({ isOpen, onClose }: CreateTaskModalProp
   }
 
   if (!isOpen) return null
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'URGENT': return 'border-red-500 text-red-400'
-      case 'HIGH': return 'border-orange-500 text-orange-400'
-      case 'MEDIUM': return 'border-yellow-500 text-yellow-400'
-      case 'LOW': return 'border-blue-500 text-blue-400'
-      default: return 'border-gray-500 text-gray-400'
-    }
-  }
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
