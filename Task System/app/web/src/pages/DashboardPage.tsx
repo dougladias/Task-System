@@ -219,7 +219,7 @@ export default function DashboardPage() {
       <div className="relative z-10 h-full">
         {/* Header */}
         <div>
-          <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 py-4">
+          <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-4">
             <div className="flex flex-col sm:flex-row items-center justify-end gap-3">
               <div className="relative w-full sm:w-auto">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -301,7 +301,7 @@ export default function DashboardPage() {
       )}
 
       {/* Kanban Board */}
-      <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
+      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 py-6 h-[calc(100vh-280px)]">
           {columns.map((column) => (
             <div key={column.id} className="flex flex-col min-h-0">
